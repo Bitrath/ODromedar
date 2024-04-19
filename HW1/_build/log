@@ -1,0 +1,24 @@
+# dune build
+# OCAMLPARAM: unset
+# Shared cache: disabled
+# Shared cache location: /Users/nicolo_zarulli/.cache/dune/db
+# Workspace root:
+# /Users/nicolo_zarulli/Desktop/Java_Espresso/Cybersecurity_UniPi/LBS/Assignments/ODromedar/HW1
+# Auto-detected concurrency: 4
+# Dune context:
+#  { name = "default"
+#  ; kind = "default"
+#  ; profile = Dev
+#  ; merlin = true
+#  ; fdo_target_exe = None
+#  ; build_dir = In_build_dir "default"
+#  ; installed_env =
+#      map
+#        { "INSIDE_DUNE" :
+#            "/Users/nicolo_zarulli/Desktop/Java_Espresso/Cybersecurity_UniPi/LBS/Assignments/ODromedar/HW1/_build/default"
+#        ; "OCAML_COLOR" : "always"
+#        ; "OPAMCOLOR" : "always"
+#        }
+#  ; instrument_with = []
+#  }
+$ /Users/nicolo_zarulli/.opam/default/bin/ocamlc.opt -config > /var/folders/0l/nfwl8bcd0zb1wk2wpqz6q04w0000gn/T/dune_ee4ca6_output
