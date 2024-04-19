@@ -6,18 +6,21 @@ type exp = CstInt of int
     | CstFlt of float
     | CstTrue
     | CstFalse
-    | TimesF of exp * exp
+    (* Int Exps *)
     | Times of exp * exp
-    | DivF of exp * exp
     | Div of exp * exp
-    | SumF of exp * exp
     | Sum of exp * exp
-    | SubF of exp * exp
     | Sub of exp * exp
-    | EqF of exp*exp
     | Eq of exp * exp
     | IsZeroInt of exp
+    (* Float Exps *)
+    | TimesF of exp * exp
+    | DivF of exp * exp
+    | SumF of exp * exp
+    | SubF of exp * exp
+    | EqF of exp * exp
     | IsZeroFloat of exp
+    (* Other Exps *)
     | Or of exp * exp
     | And of exp * exp
     | Not of exp

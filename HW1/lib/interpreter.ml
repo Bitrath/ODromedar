@@ -4,7 +4,7 @@ open Utils
 
 (* --- INTERPRETER  --- *)
 
-let rec eval(e:exp) (env: evT env ) =
+let rec eval (e: exp) (env: evT env) =
   match e with
   | CstInt(n) -> Int(n)
   | CstFlt(n) -> Float(n)
@@ -31,8 +31,8 @@ let rec eval(e:exp) (env: evT env ) =
            match (typecheck("bool", g), g) with
             | (true, Bool(true)) -> eval e2 env
             | (true, Bool(false)) -> eval e3 env
-            | (_, _) -> failwith("Non-boolean guard"))
-  | Let(i, e, ebody) -> eval ebody(bind env i (eval e env))
+            | (_, _) -> failwith ("Non-boolean guard"))
+  | Let(i, e, ebody) -> eval ebody (bind env i (eval e env))
   | Fun(i, a) -> Closure(i, a, env)
   | Apply(Den(f), eArg) ->
     (let fclosure = lookup env f in
@@ -41,5 +41,5 @@ let rec eval(e:exp) (env: evT env ) =
           let aVal = eval eArg env in
           let aenv = bind fDecEnv arg aVal in
             eval fbody aenv
-        | _ -> failwith("Non functional value"))
-  | Apply(_, _) -> failwith("Application: not first order function")
+        | _ -> failwith ("Non functional value"))
+  | Apply(_, _) -> failwith ("Application: not first order function")

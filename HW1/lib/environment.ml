@@ -22,4 +22,4 @@ let rec lookup env x =
     | (y, v)::r -> if x = y then v else lookup r x
 
 (* bind: pushes a new tuple (string, element) into the environment *)
-let bind env (x:string) (v:'a) = (x,v)::env
+let bind env (x: string) (v: 'a) = (x, v)::env
