@@ -1,5 +1,5 @@
 open Ast
-
+open Security
 (* --- ENVIRONMENT --- *)
 
 (* Empty Environment *)
@@ -12,7 +12,7 @@ type 'a env = (ide * 'a) list
 type evT = Int of int
         | Float of float
         | Bool of bool
-        | Closure of ide * exp * evT env
+        | Closure of ide * exp * pdomain * evT env
         | Unbound
 
 (* lookup: exhaustive search of an element into the environment *)
