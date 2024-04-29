@@ -5,6 +5,20 @@ open Security
 
 type ide = string
 
+(*implementazione blocco TRUSTED e UNTRUSTED*)
+
+type block_level =
+    | Trusted 
+
+    | Untrusted
+
+
+type confidentiality =
+    | Secret
+ 
+    | Public
+ 
+
 type exp = CstInt of int
     | CstBool of bool
     | CstFlt of float
@@ -38,8 +52,10 @@ type exp = CstInt of int
     | Prim of ide * exp * exp
     | Den of ide
     | If of exp * exp * exp
-    | Let of ide * exp * exp
-    | SecLet of ide * exp * pdomain * exp
+
+    | Let of ide * confidentiality *  exp * exp
+
+    | SecLet of ide * confidentiality * exp * pdomain * exp
     (* (n.b.) this interpreter won't handle recursion *)
     | Fun of ide (* list *) * exp * pdomain
     | Call of exp * exp (* list *)
@@ -55,3 +71,4 @@ type exp = CstInt of int
     | ReadFile of string
      (* Send and evaluates expr to a file iff is allowed otherwise aborts *)
     | SendFile of exp * string
+    | GetInput of exp (* tain source*)

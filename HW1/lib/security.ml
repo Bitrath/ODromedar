@@ -60,7 +60,7 @@ let rec inspectFun (stack:pstack) (request:permission) =
     match sa with
     (* Grant serve per verificare il permesso *)
     | Grant domain -> 
-      if domainInspection domain request = 1 then inspectFun sl request else 0
+      if domainInspection domain request = 1 then 1 else stackInspection inspectFun sl request 
     (* Enable serve per abilitare un permesso *)
     | Enable p -> 
       if allows p request then 1 else stackInspection inspectFun sl request
