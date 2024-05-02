@@ -9,5 +9,8 @@ module Environment = HW1__Environment
 (** @canonical HW1.Interpreter *)
 module Interpreter = HW1__Interpreter
 
+(** @canonical HW1.Security *)
+module Security = HW1__Security
+
 (** @canonical HW1.Utils *)
 module Utils = HW1__Utils
