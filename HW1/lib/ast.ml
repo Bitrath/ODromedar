@@ -6,7 +6,7 @@ type ide = string
 
 
 type trust = 
-    |   Private
+    | Private
     | Public
 
 type exp = CstInt of int
@@ -19,7 +19,7 @@ type exp = CstInt of int
     | Let of  ide  *  exp * exp 
             (* (n.b.) this interpreter won't handle recursion *)
     | Fun of ide (* list *) * exp 
-    | Call of exp * exp (* list *)
+    | Call of exp * exp (* list *) 
     | Abort of string
     | GetInput of exp (* tain source*)
     | TrustedBlock of ide * (exp) list 
