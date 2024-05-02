@@ -1,41 +1,28 @@
-open Security
 
 (* --- ABSTRACT SYNTAX TREE --- *) 
 
 type ide = string
 
-(*implementazione blocco TRUSTED e UNTRUSTED*)
-type block_level = Trusted 
-    | Untrusted
 
-type confidentiality = Secret
+
+type trust = 
+    |   Private
     | Public
 
 type exp = CstInt of int
+    | Private of bool
     | CstBool of bool
     | CstFlt of float
     | Prim of ide * exp * exp
     | Den of ide
     | If of exp * exp * exp
-    | Let of ide * confidentiality *  exp * exp
-    | SecLet of ide * confidentiality * exp * pdomain * exp
-        (* (n.b.) this interpreter won't handle recursion *)
-    | Fun of ide (* list *) * exp * pdomain
+    | Let of  ide  *  exp * exp 
+            (* (n.b.) this interpreter won't handle recursion *)
+    | Fun of ide (* list *) * exp 
     | Call of exp * exp (* list *)
-    | DemandPermission of permission
-    | OnPermission of permission * exp
-    | CheckPermission of permission
     | Abort of string
-    | Enable of permission * exp
-    | Disable of permission * exp
-        (* Evaluates the expression pushing the secAction on top of the stack *)
-    | SecBlock of secAction * exp
-        (* Reads a file iff is allowed otherwise aborts *)
-    | ReadFile of string
-        (* Send and evaluates expr to a file iff is allowed otherwise aborts *)
-    | SendFile of exp * string
     | GetInput of exp (* tain source*)
-
+    | TrustedBlock of ide * (exp) list 
 (*
         (* Int Exps *)
     | Times of exp * exp

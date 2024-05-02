@@ -1,5 +1,4 @@
 open Ast
-open Security
 (* --- ENVIRONMENT --- *)
 
 (* Empty Environment *)
@@ -8,13 +7,14 @@ let emptyenv = []
 (* Non-Empty Environment *)
   (* The environment maps variables to
     pairs consisting of a value and taint status *)
-type 'a env = (ide * 'a * bool )  list
+type 'a env = (ide * 'a * bool)  list
 
 (* Types handled from the environment *)
 type evT = Int of int
     | Float of float
     | Bool of bool
-    | Closure of ide * exp * pdomain * evT env
+    | String of string
+    | Closure of ide * exp * evT env
     | Unbound
 
 (* lookup: exhaustive search of an element into the environment *)
@@ -22,6 +22,11 @@ let rec lookup env x =
   match env with
     | [] -> failwith "Not Found"
     | (y, v, _)::r -> if x = y then v else lookup r x
+
+let rec clean_lookup env x =
+  match env with
+    | [] -> Int 0
+    | (y, _, _)::r -> if x = y then Int 1 else clean_lookup r x
 
 (*taintnes check, if x y binding it returns the taint status*)
 let rec t_lookup env x =
