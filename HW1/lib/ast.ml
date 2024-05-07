@@ -4,13 +4,18 @@
 type ide = string
 
 type trust = 
-    | Private (* Trusted *)
-    | Public  (* Untrusted *)
+    | Trusted (* Trusted *)
+    | Untrusted  (* Untrusted *)
+
+
+type conf =
+    | Public
+    | Private
 
 type exp = CstInt of int
     | CstBool of bool
     | CstFlt of float
-    | Let of  ide  * exp * exp 
+    | Let of  ide  * conf *  exp * exp 
     | Prim of ide * exp * exp
     | Den of ide
     | If of exp * exp * exp

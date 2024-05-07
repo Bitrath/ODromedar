@@ -41,6 +41,24 @@ let rec t_lookup env x =
 let bind env (x: string) (v: 'a) = (x, v)::env
 
 
+
+(* le funzioni di un blocco trusted non sono connesse al nome specifico del blocco
+   trusted, di blocco trusted ne eesiste uno SOLO*)
+
+let rec checker body env t eval = 
+  match body with
+  | [] -> Int 1
+  | exp1::tail-> match exp1 with 
+                      | Let(_,_,_,_) -> = eval exp1 env t Trusted :: checker tail env t eval
+
+                      | _ ->  failwith "ONLY LET FUNCTIONS ARE ALLOWED"
+
+
+
+
+
+
+
 (*
 let rec block_lookup body blockEnv t eval = 
   match body with 
