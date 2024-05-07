@@ -4,7 +4,7 @@ open Environment
 
 (* --- INTERPRETER  --- *)
 
-let rec eval (e: exp) (env: evT env) (t : bool) (sec_lev : trust) : evT * bool = 
+let rec eval (e: exp) (env: evT env) (t : bool) (*(sec_lev : trust)*) : evT * bool = 
   match e with
   | CstInt n -> (Int n, t)
   | CstFlt n -> (Float n, t)
@@ -24,16 +24,16 @@ let rec eval (e: exp) (env: evT env) (t : bool) (sec_lev : trust) : evT * bool =
                                 let rec checker b blockEnv = 
                                     match b with 
                                       | [] -> failwith "ciao"
-                                      | exp1::tail -> ( match exp1 with
+                                      | exp1::tail ->  match exp1 with
                                                   | Let(_, _, _) ->  (let currEnv = eval exp1 blockEnv t Private :: env  in
                                                    checker tail currEnv)
-                                                  | _ -> failwith "NOTHING ELSE, JUST Let" ) in
+                                                  | _ -> failwith "NOTHING ELSE, JUST Let"  in
                                                     checker body blockIdEnv 
                            
                                                    
           | (_ , _) -> failwith "NO"
                                    
-                                
+                               
   
 
 
@@ -51,11 +51,11 @@ let rec eval (e: exp) (env: evT env) (t : bool) (sec_lev : trust) : evT * bool =
   )
   *)
 
-  | Let (x, eRhs, letBody) -> (
+  | Let (x, eRhs, letBody) -> 
      let xVal, t1 = eval eRhs env t in (* xVal: evT * bool != xVal, t1: evT, bool *)
       let letEnv = (x, xVal, t1)::env in
         eval letBody letEnv t1  
-    )
+    
     
 
   | Prim (ope, e1, e2) -> (
@@ -100,8 +100,4 @@ let rec eval (e: exp) (env: evT env) (t : bool) (sec_lev : trust) : evT * bool =
     )
   | GetInput e -> eval e env true 
   | Abort msg -> failwith msg
-  
-  
-
-
   

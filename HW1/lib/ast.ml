@@ -10,7 +10,6 @@ type trust =
     | Public
 
 type exp = CstInt of int
-    | Private of bool
     | CstBool of bool
     | CstFlt of float
     | Prim of ide * exp * exp

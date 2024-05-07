@@ -1,4 +1,7 @@
 open Ast
+
+
+
 (* --- ENVIRONMENT --- *)
 
 (* Empty Environment *)
@@ -23,6 +26,8 @@ let rec lookup env x =
     | [] -> failwith "Not Found"
     | (y, v, _)::r -> if x = y then v else lookup r x
 
+
+    (*Vede se c'è un trusted block già definito con quel nome*)
 let rec clean_lookup env x =
   match env with
     | [] -> Int 0
@@ -36,3 +41,18 @@ let rec t_lookup env x =
 
 (* bind: pushes a new tuple (string, element) into the environment *)
 let bind env (x: string) (v: 'a) = (x, v)::env
+
+
+
+let rec block_lookup body blockEnv t eval = 
+  match body with 
+    | [] -> blockEnv,t
+    | exp1::tail ->  match exp1 with
+                | Let(x, eRhs, letbody ) ->   let xVal, t1 = eval eRhs blockEnv t Private in 
+                                                let letEnv = (x, xVal, t1)::blockEnv in
+                                                  let funVal, t2 = eval letbody letEnv t   Private  in
+                                                    
+                                                    block_lookup tail blockEnv t eval
+
+
+                | _ -> failwith "NOTHING ELSE, JUST Let"  
