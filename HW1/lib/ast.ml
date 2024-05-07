@@ -3,25 +3,22 @@
 
 type ide = string
 
-
-
 type trust = 
-    | Private
-    | Public
+    | Private (* Trusted *)
+    | Public  (* Untrusted *)
 
 type exp = CstInt of int
     | CstBool of bool
     | CstFlt of float
+    | Let of  ide  * exp * exp 
     | Prim of ide * exp * exp
     | Den of ide
     | If of exp * exp * exp
-    | Let of  ide  *  exp * exp 
-            (* (n.b.) this interpreter won't handle recursion *)
-    | Fun of ide (* list *) * exp 
+    | Fun of ide (* list *) * exp (* (n.b.) this interpreter won't handle recursion *)
     | Call of exp * exp (* list *) 
     | Abort of string
     | GetInput of exp (* tain source*)
-    | TrustedBlock of ide * (exp) list 
+    | TrustedBlock of ide * (exp) list
 (*
         (* Int Exps *)
     | Times of exp * exp

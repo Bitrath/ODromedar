@@ -4,40 +4,14 @@ open Environment
 
 (* --- INTERPRETER  --- *)
 
-let rec eval (e: exp) (env: evT env) (t : bool) (*(sec_lev : trust)*) : evT * bool = 
+let rec eval (e: exp) (env: evT env) (t : bool) (*(sec: trust)*) : evT * bool = 
   match e with
   | CstInt n -> (Int n, t)
   | CstFlt n -> (Float n, t)
   | CstBool b -> (Int (if b then 1 else 0), t)
   | Den id -> (lookup env id, t_lookup env id)
-  
-
                   (*IL BODY È UN LISTA DI ESPRESSIONI*)
-  | TrustedBlock(id, body) -> 
-      (* We search for the Block Identifier *)
-      (* If available, exit the Block, it already exists!!! *)
-      (* -> Not available: Then insert it into the current env and continue with the evaluation of the body *)
-      let resultId = clean_lookup env id in 
-        match resultId, t with
-                                      (*I TRUSTED BLOCK SONO SEMPRE UNTAINTED -> FALSE*)
-          | (Int 0, false) -> let blockIdEnv = (id, String id, t)::env in 
-                                let rec checker b blockEnv = 
-                                    match b with 
-                                      | [] -> failwith "ciao"
-                                      | exp1::tail ->  match exp1 with
-                                                  | Let(_, _, _) ->  (let currEnv = eval exp1 blockEnv t Private :: env  in
-                                                   checker tail currEnv)
-                                                  | _ -> failwith "NOTHING ELSE, JUST Let"  in
-                                                    checker body blockIdEnv 
-                           
-                                                   
-          | (_ , _) -> failwith "NO"
-                                   
-                               
-  
-
-
-(*
+  (*
   | LetSec (x, eRhs, letBody) ->(
       
       let xVal, t1 = eval eRhs env t in (* xVal: evT * bool != xVal, t1: evT, bool *)
@@ -50,14 +24,10 @@ let rec eval (e: exp) (env: evT env) (t : bool) (*(sec_lev : trust)*) : evT * bo
     
   )
   *)
-
   | Let (x, eRhs, letBody) -> 
      let xVal, t1 = eval eRhs env t in (* xVal: evT * bool != xVal, t1: evT, bool *)
       let letEnv = (x, xVal, t1)::env in
         eval letBody letEnv t1  
-    
-    
-
   | Prim (ope, e1, e2) -> (
       let v1, t1 = eval e1 env t in
         let v2, t2 = eval e2 env t in
@@ -87,7 +57,6 @@ let rec eval (e: exp) (env: evT env) (t : bool) (*(sec_lev : trust)*) : evT * bo
           | _ -> failwith "eval if" 
     )
   | Fun (f_param, f_body) -> (Closure (f_param, f_body, env), t)
-(* --- [ >:( ] --- *)
   | Call (f, param) -> (
       let fClosure, f_t = eval f env t in
         match fClosure, f_t  with (*CLOSURE: la funzione viene valutata solo se il valore di f_t è UNTAINED ,cioè FALSE*)
@@ -100,4 +69,13 @@ let rec eval (e: exp) (env: evT env) (t : bool) (*(sec_lev : trust)*) : evT * bo
     )
   | GetInput e -> eval e env true 
   | Abort msg -> failwith msg
+  | TrustedBlock(id, body) -> 
+    (* We search for the Block Identifier *)
+    (* If available, exit the Block, it already exists!!! *)
+    (* -> Not available: Then insert it into the current env and continue with the evaluation of the body *)
+      let resultId = clean_lookup env id in 
+        match resultId, t with 
+          | (Int 0, false) -> failwith "NON SIAMO ANCORA PRONTI"  (*I TRUSTED BLOCK SONO SEMPRE UNTAINTED -> FALSE*)                   
+          | (_, _) -> failwith "NO"
+  | _ -> failwith "unexpected"
   

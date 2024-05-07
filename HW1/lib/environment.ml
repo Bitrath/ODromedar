@@ -1,7 +1,5 @@
 open Ast
 
-
-
 (* --- ENVIRONMENT --- *)
 
 (* Empty Environment *)
@@ -43,7 +41,7 @@ let rec t_lookup env x =
 let bind env (x: string) (v: 'a) = (x, v)::env
 
 
-
+(*
 let rec block_lookup body blockEnv t eval = 
   match body with 
     | [] -> blockEnv,t
@@ -56,3 +54,14 @@ let rec block_lookup body blockEnv t eval =
 
 
                 | _ -> failwith "NOTHING ELSE, JUST Let"  
+
+let rec checker b blockEnv taintValue = 
+                                    match b with 
+                                      | [] -> blockEnv
+                                      | exp1::tail -> match exp1 with
+                                            | Let(letIde, letArgs, letBody) ->  (
+                                                let ideVal, ideTaint = eval letArgs blockEnv taintValue in 
+                                                let updEnv = (letIde, ideVal, ideTaint)::blockEnv in 
+                                                let bodyVal, bodyTaint = eval letBody updEnv ideTaint in 
+                                                checker tail updEnv bodyTaint )
+                                            | _ -> []*)
