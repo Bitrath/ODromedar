@@ -28,14 +28,13 @@ let rec eval (e: exp) (env: evT env) (t : bool) (sec_lev : trust) : evT * bool =
                                                   | Let(_, _, _) ->  (let currEnv = eval exp1 blockEnv t Private :: env  in
                                                    checker tail currEnv)
                                                   | _ -> failwith "NOTHING ELSE, JUST Let" ) in
-
-                                               checker body blockIdEnv 
+                                                    checker body blockIdEnv 
                            
-                                                      
+                                                   
           | (_ , _) -> failwith "NO"
-                                      
                                    
-    
+                                
+  
 
 
 (*
@@ -58,6 +57,7 @@ let rec eval (e: exp) (env: evT env) (t : bool) (sec_lev : trust) : evT * bool =
         eval letBody letEnv t1  
     )
     
+
   | Prim (ope, e1, e2) -> (
       let v1, t1 = eval e1 env t in
         let v2, t2 = eval e2 env t in
@@ -100,7 +100,8 @@ let rec eval (e: exp) (env: evT env) (t : bool) (sec_lev : trust) : evT * bool =
     )
   | GetInput e -> eval e env true 
   | Abort msg -> failwith msg
-
+  
+  
 
 
   
