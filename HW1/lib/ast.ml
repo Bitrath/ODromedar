@@ -1,11 +1,20 @@
 
 (* --- ABSTRACT SYNTAX TREE --- *) 
 
-type ide = string
+type ide = string (* Questa riga definisce un nuovo tipo chiamato ide, 
+   che rappresenta gli identificatori nel linguaggio. 
+   Gli identificatori sono semplicemente delle stringhe. *)
 
+(*
+type trust = (* Qui viene definito un altro tipo, trust, che rappresenta 
+   i livelli di fiducia nelle operazioni del programma. *)
+    | Private
+    | Public
+*)
 type trust = 
     | Trusted (* Trusted *)
     | Untrusted  (* Untrusted *)
+    | BlockLvl
 
 
 type conf =
@@ -15,15 +24,18 @@ type conf =
 type exp = CstInt of int
     | CstBool of bool
     | CstFlt of float
-    | Let of  ide  * conf *  exp * exp 
-    | Prim of ide * exp * exp
+    | Prim of ide * exp * exp (* Prim: Rappresenta operazioni primitive con due 
+                                operandi e un identificatore dell'operatore.*)
     | Den of ide
     | If of exp * exp * exp
-    | Fun of ide (* list *) * exp (* (n.b.) this interpreter won't handle recursion *)
-    | Call of exp * exp (* list *) 
+    | Let of  ide  *  exp * exp 
+            (* (n.b.) this interpreter won't handle recursion *)
+    | Fun of ide (* list *) * exp 
+    | Call of exp * exp (* list *) (* Call: Chiama una funzione con argomenti. *)
     | Abort of string
-    | GetInput of exp (* tain source*)
-    | TrustedBlock of ide * (exp) list
+    | GetInput of exp (* taint source *)
+    | TrustedBlock of ide * (exp) list * ide (* Definisce un blocco di espressioni 
+       con un livello di fiducia specificato e una lista di espressioni, aggiunto ad una ide-> handle *)
 (*
         (* Int Exps *)
     | Times of exp * exp

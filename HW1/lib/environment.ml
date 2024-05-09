@@ -6,52 +6,57 @@ open Ast
 let emptyenv = []
 
 (* Non-Empty Environment *)
-  (* The environment maps variables to
-    pairs consisting of a value and taint status *)
-type 'a env = (ide * 'a * bool)  list
+  (* env è un tipo parametrico che rappresenta un ambiente. Ogni elemento 
+    dell'ambiente è una tripla contenente un identificatore (ide), un 
+    valore generico ('a) e uno status di taint (booleano). *)
+type 'a env = (ide * 'a * bool) list
 
 (* Types handled from the environment *)
 type evT = Int of int
     | Float of float
     | Bool of bool
     | String of string
-    | Closure of ide * exp * evT env
+    | Closure of ide * exp * evT env (* le Closure rappresentano funzioni:
+       ide: rappresenta il nome dell'identificatore associato alla chiusura,
+            e' l'identificatore della funzione.
+       exp: e' il corpo della funzione, l'espressione che verra' valutata quando 
+            la funzione viene chiamata.
+       evT env: e' l'ambiente in cui la funzione e' stata definita. 
+            Contiene i legami tra gli identificatori e i loro valori nel momento 
+            della creazione della chiusura. *)
+
+
     | Unbound
 
-(* lookup: exhaustive search of an element into the environment *)
-let rec lookup env x =
+(* lookup: Cerca un identificatore nell'ambiente e restituisce il valore associato. *)
+let rec lookup env x = 
   match env with
     | [] -> failwith "Not Found"
     | (y, v, _)::r -> if x = y then v else lookup r x
+  (* y -> ide, v -> valore associato a y, _ -> taintness (non importante ora) *)
 
-
-    (*Vede se c'è un trusted block già definito con quel nome*)
+(* clean_lookup: Cerca se c'è un trusted block già definito con quel nome *)
 let rec clean_lookup env x =
   match env with
     | [] -> Int 0
-    | (y, _, _)::r -> if x = y then Int 1 else clean_lookup r x
+    | (y, _, _)::r -> if x = y then Int 1 else clean_lookup r x (*????????*)
 
-(*taintnes check, if x y binding it returns the taint status*)
+(* t_lookup: Restituisce lo status di taint di un identificatore nell'ambiente *)
 let rec t_lookup env x =
   match env with
     | [] -> failwith "Not Found"
     | (y, _, t)::r -> if y = x then t else t_lookup r x
 
-(* bind: pushes a new tuple (string, element) into the environment *)
+(* bind: Aggiunge un nuovo identificatore con valore nell'ambiente 
+   ---> (adds a tuple = (string, element) ) *)
 let bind env (x: string) (v: 'a) = (x, v)::env
-
-
-
-(* le funzioni di un blocco trusted non sono connesse al nome specifico del blocco
-   trusted, di blocco trusted ne eesiste uno SOLO*)
-
-let rec checker body env t eval = 
-  match body with
-  | [] -> Int 1
-  | exp1::tail-> match exp1 with 
-                      | Let(_,_,_,_) -> = eval exp1 env t Trusted :: checker tail env t eval
-
-                      | _ ->  failwith "ONLY LET FUNCTIONS ARE ALLOWED"
+(* env -> L'ambiente esistente, rappresentato come una lista di tuple.
+   x -> L'identificatore da associare al valore nella nuova tupla.
+   v -> Il valore da associare all'identificatore x nella nuova tupla.
+   (x, v) -> Questo crea una nuova tupla contenente l'ide x e il valore v.
+   ::env -> Utilizzando l'operatore ::, la nuova tupla viene concatenata alla testa 
+      dell'ambiente esistente, creando cosi' un nuovo ambiente con il nuovo legame 
+      identificatore-valore. *)
 
 
 
@@ -59,8 +64,9 @@ let rec checker body env t eval =
 
 
 
-(*
-let rec block_lookup body blockEnv t eval = 
+
+
+(* let rec block_lookup body blockEnv t eval = 
   match body with 
     | [] -> blockEnv,t
     | exp1::tail ->  match exp1 with
@@ -71,15 +77,4 @@ let rec block_lookup body blockEnv t eval =
                                                     block_lookup tail blockEnv t eval
 
 
-                | _ -> failwith "NOTHING ELSE, JUST Let"  
-
-let rec checker b blockEnv taintValue = 
-                                    match b with 
-                                      | [] -> blockEnv
-                                      | exp1::tail -> match exp1 with
-                                            | Let(letIde, letArgs, letBody) ->  (
-                                                let ideVal, ideTaint = eval letArgs blockEnv taintValue in 
-                                                let updEnv = (letIde, ideVal, ideTaint)::blockEnv in 
-                                                let bodyVal, bodyTaint = eval letBody updEnv ideTaint in 
-                                                checker tail updEnv bodyTaint )
-                                            | _ -> []*)
+                | _ -> failwith "NOTHING ELSE, JUST Let"  *)
