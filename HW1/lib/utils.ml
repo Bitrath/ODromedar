@@ -5,24 +5,19 @@ open Environment
 (* typecheck: checks the identifier t matches with a constructor of type evT *)
 let typecheck (t, typeDescriptor) = 
     match t with
-      | "int" -> (
-          match typeDescriptor with
-            | Int _ -> true
-            | _ -> false
-        )
-      | "bool" -> (
-          match typeDescriptor with
-            | Bool _ -> true
-            | _ -> false
-        )
-      | "float" -> (
-          match typeDescriptor with
-            | Float _ -> true
-            | _ -> false
-        )
-      | _ -> failwith "Not a valid type"
+    | "int" -> (match typeDescriptor with
+              | Int(_) -> true
+              | _ -> false)
+    | "bool" -> (match typeDescriptor with
+              | Bool(_) -> true
+              | _ -> false)
+    | "float" -> (match typeDescriptor with
+              | Float(_) -> true
+              | _ -> false)
+    | _ -> failwith("Not a valid type")
 
-(* BOOL Type Utils (NO REFACTORING DONE)*)
+(* BOOL Type Utils *)
+
 let bool_and (x, y) =
   match (typecheck("bool", x), typecheck("bool", y), x, y) with
     | (true, true, Bool(x), Bool(y)) -> Bool(x && y)
