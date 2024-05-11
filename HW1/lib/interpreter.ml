@@ -94,7 +94,7 @@ let rec eval (e: exp) (env: evT env) (t : bool)  (sec_lev : trust) : evT * bool 
   | Abort msg -> failwith msg
 
 
-  | TrustedBlock(id, body, handle_name) -> 
+  | TrustedBlock(id, body,  handle_name) -> 
     (* We search for the Block Identifier *)
     (* If available, exit the Block, it already exists!!! *)
     (* -> Not available: Then insert it into the current env and continue with the evaluation of the body *)
@@ -126,17 +126,48 @@ let rec eval (e: exp) (env: evT env) (t : bool)  (sec_lev : trust) : evT * bool 
                         
                          ) in 
 
-                let handleEnv = evalBody body  newBlockEnv in
+                    let handleEnv = evalBody body  newBlockEnv in
 
-                    let result = lookup handleEnv handle_name in
-                      match result with 
-                        | Closure(handle_name, exp, env ) -> (handle_name , result ,t )::env  (* QUESTO È UN ERRORE*)
+                    let handleClosure =
+                      let result = lookup handleEnv handle_name in
+                        match result with 
+                          | Closure( _ , handleExp, handleEnv ) -> (handleExp, handleEnv)
 
-                        | _ -> failwith "not found"
+                          | _ -> failwith "not found"
+
+                        in
+                        
+                        let handleRes, t_res = eval (fst handleClosure) (snd handleClosure) t sec_lev in
+                          (handleRes, t_res)
+                    
+                       
+| Include(trust, id , pluginCode, incBody) -> 
+    match sec_lev with 
+
+    | BlockLvl -> failwith "cant' include a plugin inside of a trusted block"
+
+    | _ -> let pluginResult, t1 = eval pluginCode env t sec_lev in
+
+          let env' =
+            match id with
+              | "" -> env
+              | _ -> (id, pluginResult, t1) :: env
+          in 
+
+          eval incBody env' t1 sec_lev
 
 
-        eval handle ((id, handleEnv,t  )::env) t sec_lev
+| Exec (trust, incName, ) -> 
+
+
+
+
+
+(* 
+la nostra handle è implicitamente definita quadno chiamiamo il trustedBlock.In questo modo abbiamo risolto
+il bisogno di definire la keyword "Handle"
+*)
           
           
   
-  | _ -> failwith "Pattern not matched"
+  

@@ -16,7 +16,6 @@ type trust =
     | Untrusted  (* Untrusted *)
     | BlockLvl
 
-
 type conf =
     | Public
     | Private
@@ -34,9 +33,11 @@ type exp = CstInt of int
     | Call of exp * exp (* list *) (* Call: Chiama una funzione con argomenti. *)
     | Abort of string
     | GetInput of exp (* taint source *)
-    | TrustedBlock of ide * (exp) list * ide (* Definisce un blocco di espressioni 
+    | TrustedBlock of ide * (exp) list * ide  (* Definisce un blocco di espressioni 
        con un livello di fiducia specificato e una lista di espressioni, aggiunto ad una ide-> handle *)
-(*
+    | Include of trust * ide * exp * exp 
+    | Exec of ide * exp
+       (*  
         (* Int Exps *)
     | Times of exp * exp
     | Div of exp * exp
