@@ -24,8 +24,7 @@ type evT = Int of int
        evT env: e' l'ambiente in cui la funzione e' stata definita. 
             Contiene i legami tra gli identificatori e i loro valori nel momento 
             della creazione della chiusura. *)
-
-
+    | ClosureTrustedBlock of evT env
     | Unbound
 
 (* lookup: Cerca un identificatore nell'ambiente e restituisce il valore associato. *)

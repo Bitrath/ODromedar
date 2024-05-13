@@ -23,18 +23,21 @@ type conf =
 type exp = CstInt of int
     | CstBool of bool
     | CstFlt of float
+    | CstStr of string
     | Prim of ide * exp * exp (* Prim: Rappresenta operazioni primitive con due 
                                 operandi e un identificatore dell'operatore.*)
     | Den of ide
     | If of exp * exp * exp
-    | Let of  ide  *  exp * exp 
+    | Let of ide * conf * exp * exp 
             (* (n.b.) this interpreter won't handle recursion *)
     | Fun of ide (* list *) * exp 
     | Call of exp * exp (* list *) (* Call: Chiama una funzione con argomenti. *)
     | Abort of string
     | GetInput of exp (* taint source *)
-    | TrustedBlock of ide * (exp) list * ide  (* Definisce un blocco di espressioni 
+    | TrustedBlock of ide * exp * exp  (* Definisce un blocco di espressioni 
        con un livello di fiducia specificato e una lista di espressioni, aggiunto ad una ide-> handle *)
+    | EndTrustedBlock
+    | Handle of ide * exp
     | Include of trust * ide * exp * exp 
     | Exec of ide * exp
        (*  
