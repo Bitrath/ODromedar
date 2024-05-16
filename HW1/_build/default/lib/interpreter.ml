@@ -97,7 +97,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
     )
   | GetInput e -> eval e env true sec_lev
   | Abort msg -> failwith msg
-  | TrustedBlock(id, body, code) -> 
+  | TrustedBlock(id, body) -> 
     (* We search for the Block Identifier *)
     (* If available, exit the Block, it already exists!!! *)
     (* -> Not available: Then insert it into the current env and continue with the evaluation of the body *)
@@ -109,12 +109,63 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
             failwith ("can't declare a trustedBlock inside of untrusted code")
         else (
             let newBlockEnv = [] in 
-              let bodyRes, evalTaint = eval body newBlockEnv taint BlockLvl in  
+              let bodyRes, evalTaint = eval body newBlockEnv taint BlockLvl in 
                 match bodyRes with 
-                  | ClosureTrustedBlock (blockEnv) -> eval code ((id, bodyRes, evalTaint)::env) evalTaint sec_lev
-                  | _ -> failwith "error"
+                  | ClosureTrustedBlock(_) -> ( if evalTaint = true then failwith "tainted." 
+                      else 
+                        let extEnv = (id, bodyRes, evalTaint)::env in 
+                          eval (EndTrustedBlock(id)) extEnv evalTaint BlockLvl
+                    )
+                  | _ -> failwith "The Block ended with an expression different than an Handle. Error."
           ) 
-            (* let newBlockEnv = [] in
+    | Handle (ideFun) -> (
+      (* cerchiamo il nome della handle fun *)
+        if sec_lev != BlockLvl then failwith "Cannot declare a Handle Function outside the Trusted Block"
+        else
+        let res, resTaint = eval (Den(ideFun)) env taint sec_lev in (* guardiamo se l'ide della handle function è presente nell'env del block*)
+          match res with 
+            | Closure(_) -> if resTaint = true then failwith "tainted." 
+                 else (ClosureTrustedBlock(env), resTaint)
+            | _ -> failwith "no handle fun name..."
+      ) 
+    | EndTrustedBlock(i) -> (
+       (* estraiamo il trusted block... *)
+       let res, resT = eval (Den(i)) env taint sec_lev in
+        match res with 
+         | ClosureTrustedBlock(envBlock) -> (
+            let rec extractHandle env : ide = (
+              match env with 
+                | [] -> "None"
+                | (fIde, fEvt, _) :: tail -> ( match fEvt with 
+                  | Closure(_) -> (fIde)
+                  | _ -> extractHandle tail )
+            ) in 
+              let hName = extractHandle envBlock in 
+                 if hName = "None" then failwith "No Handle in TrustedBlock. Error." 
+                    else
+                      let newEnv = (hName, HandleFlag(i), resT)::env in 
+                        (Env(newEnv), resT)
+         )
+         | _ -> failwith "No ClosureTrustedBlock. Error."
+    )
+    | Include(trst, id, pluginCode, incBody) -> (Int 0, true)
+        (* match sec_lev with 
+          | BlockLvl -> failwith "can't include a plugin inside of a trusted block"
+          | _ -> let pluginResult, t1 = eval pluginCode env taint sec_lev in
+                let env' =
+                  match id with
+                    | "" -> env
+                    | _ -> (id, pluginResult, t1) :: env
+                in eval incBody env' t1 sec_lev *)
+    | Exec(exName, exBody) -> (Int 0, true)
+    | _ -> failwith "fail: error include"
+
+(* 
+  la nostra handle e' implicitamente definita quadno chiamiamo il trustedBlock. In questo modo abbiamo risolto
+  il bisogno di definire la keyword "Handle"
+*)
+
+(* let newBlockEnv = [] in
               
                 (*funzione ausiliaria per valutare il contenuto del trust block*)
   
@@ -145,36 +196,9 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
                         
                         let handleRes, t_res = eval (fst handleClosure) (snd handleClosure) t sec_lev in
                           (handleRes, t_res) *)
-    | Handle (ideFun, endTrustExp) -> (
-      (* cerchiamo il nome della handle fun *)
-        if sec_lev != BlockLvl then failwith "Cannot declare a handle entry point outside the trusted block"
-        else
-        let res, resTaint = eval (Den(ideFun)) env taint sec_lev in (* guardiamo se l'ide della handle function è presente nell'env del block*)
-          match res with 
-            | Int 1 -> (Int 1, false) (* 
-              1) bisogna trovare un modo per associare il nome delle handle fun, e fare un richiamo della fun stessa 
-              2) usare endTrustExp(: EndTrustedBlock) per finire il codice sicuro del Trusted Block *)
-            | _ -> failwith "no handle fun name..."
-      ) 
-    | EndTrustedBlock -> (ClosureTrustedBlock env, taint)               
-    | Include(id, pluginCode, incBody) -> 
-        match sec_lev with 
-          | BlockLvl -> failwith "cant' include a plugin inside of a trusted block"
-          | _ -> let pluginResult, t1 = eval pluginCode env taint sec_lev in
-                let env' =
-                  match id with
-                    | "" -> env
-                    | _ -> (id, pluginResult, t1) :: env
-                in eval incBody env' t1 sec_lev
-    | Exec(exName, exBody) -> (Int 0, true)
-    | _ -> failwith "ops"
 
-(* 
-  la nostra handle è implicitamente definita quadno chiamiamo il trustedBlock.In questo modo abbiamo risolto
-  il bisogno di definire la keyword "Handle"
-*)
-
-(*
+(* TrustedBlock (ide * expr * expr) -> Fun(...) -> Closure(ide, ...) -> ... -> Handle(ideFun) -> (..)::envPriv
+                                                                      (ideHandle, FlagHandle(ideRefEnv), taint)::(ideTrustB, ClosureEnvPriv(envPriv), taint)::env
    let trustBlockOne(:ide) = 
       trust {
         body(:exp) 
@@ -184,4 +208,22 @@ body(:exp) =
     let exp1 = in 
           (...) in 
     handle funName;; -> Handle( ide, exp )
+
+
+    ENV Principale: (ide * evT * taint) list
+                    (nomeHandle * evT: Handle * taint)
+
+    ENV 
+*)
+
+(*
+   
+Enclave ide * exp(tutto)* exp(include)
+
+
+
+
+
+
+
 *)

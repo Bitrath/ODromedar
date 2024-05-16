@@ -25,6 +25,8 @@ type evT = Int of int
             Contiene i legami tra gli identificatori e i loro valori nel momento 
             della creazione della chiusura. *)
     | ClosureTrustedBlock of evT env
+    | HandleFlag of ide 
+    | Env of evT env
     | Unbound
 
 (* lookup: Cerca un identificatore nell'ambiente e restituisce il valore associato. *)
@@ -58,11 +60,10 @@ let bind env (x: string) (v: 'a) = (x, v)::env
       identificatore-valore. *)
 
 
-
-
-
-
-
+let pop_first e = 
+  match e with 
+    | [] -> None
+    | first :: _ -> Some first
 
 
 (* let rec block_lookup body blockEnv t eval = 

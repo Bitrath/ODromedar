@@ -34,12 +34,13 @@ type exp = CstInt of int
     | Call of exp * exp (* list *) (* Call: Chiama una funzione con argomenti. *)
     | Abort of string
     | GetInput of exp (* taint source *)
-    | TrustedBlock of ide * exp * exp  (* Definisce un blocco di espressioni 
+    | TrustedBlock of ide * exp  (* Definisce un blocco di espressioni 
        con un livello di fiducia specificato e una lista di espressioni, aggiunto ad una ide-> handle *)
-    | EndTrustedBlock
-    | Handle of ide * exp
+    | Handle of ide
+    | EndTrustedBlock of ide
     | Include of trust * ide * exp * exp 
     | Exec of ide * exp
+    | PrintEnv
        (*  
         (* Int Exps *)
     | Times of exp * exp
