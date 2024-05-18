@@ -24,6 +24,9 @@ type evT = Int of int
        evT env: e' l'ambiente in cui la funzione e' stata definita. 
             Contiene i legami tra gli identificatori e i loro valori nel momento 
             della creazione della chiusura. *)
+    | ClosureTrustedBlock of evT env
+    | HandleFlag of ide 
+    | Env of evT env
     | Unbound
 
 (* lookup: Cerca un identificatore nell'ambiente e restituisce il valore associato. *)
@@ -55,6 +58,14 @@ let bind env (x: string) (v: 'a) = (x, v)::env
    ::env -> Utilizzando l'operatore ::, la nuova tupla viene concatenata alla testa 
       dell'ambiente esistente, creando cosi' un nuovo ambiente con il nuovo legame 
       identificatore-valore. *)
+
+
+let pop_first e = (* funzione per estrarre il primo elemento della lista *)
+  match e with 
+    | [] -> None
+    | first :: _ -> Some first (* some indica la presenza di un valore
+                                first indica che viene restituito il primo valore *)
+
 
 (* let rec block_lookup body blockEnv t eval = 
   match body with 
