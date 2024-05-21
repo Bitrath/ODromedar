@@ -26,6 +26,8 @@ type evT = Int of int
             della creazione della chiusura. *)
     | ClosureTrustedBlock of evT env
     | HandleFlag of ide 
+    | ClosureInclude of trust * exp
+    | ExecuteCheck of evT env
     | Env of evT env
     | Unbound
 

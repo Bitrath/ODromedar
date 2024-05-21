@@ -12,8 +12,8 @@ type trust = (* Qui viene definito un altro tipo, trust, che rappresenta
     | Public
 *)
 type trust = 
-    | Trusted (* Trusted *)
-    | Untrusted  (* Untrusted *)
+    | Trusted
+    | Untrusted
     | BlockLvl
 
 type conf =
@@ -36,11 +36,12 @@ type exp = CstInt of int
     | GetInput of exp (* taint source *)
     | TrustedBlock of ide * exp  (* Definisce un blocco di espressioni 
        con un livello di fiducia specificato e una lista di espressioni, aggiunto ad una ide-> handle *)
-    | Handle of ide
     | EndTrustedBlock of ide
-    | Include of trust * ide * exp * exp 
-    | Exec of ide * exp
-    | PrintEnv
+    | Handle of ide
+    | Include of trust * ide * exp 
+    | EndInclude
+    | Execute of ide * exp
+    | Empty
        (*  
         (* Int Exps *)
     | Times of exp * exp

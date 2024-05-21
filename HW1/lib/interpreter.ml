@@ -45,7 +45,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
             | ">", Int i1, Int i2 -> (Int (if i1 > i2 then 1 else 0), t1 || t2)
             | "&", Bool b1, Bool b2 -> (Bool (b1 && b2), t1 || t2)
             | "|", Bool b1, Bool b2 -> (Bool (b1 || b2), t1 || t2)
-            (* e le stringhe?? manca il compare e le altre operazioni... *)
+            | "cmp", String s1, String s2 -> (Bool (if (String.compare s1 s2) = 0 then true else false), t1 || t2)
             (* ops for float *)
             | "*", Float i1, Float i2 -> (Float (i1 *. i2), t1 || t2)
             | "+", Float i1, Float i2 -> (Float (i1 +. i2), t1 || t2)
@@ -53,7 +53,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
             | "=", Float i1, Float i2 -> (Int (if i1 = i2 then 1 else 0), t1 || t2)
             | "<", Float i1, Float i2 -> (Int (if i1 < i2 then 1 else 0), t1 || t2)
             | ">", Float i1, Float i2 -> (Int (if i1 > i2 then 1 else 0), t1 || t2)
-            | _ -> failwith "unknown primitive or wrong type"  
+            | _ -> failwith "PRIM Error: Unknown primitive or wrong type"  
     )
   | If (cond, e2, e3) -> (
       let v1, t1 = eval cond env taint sec_lev in
@@ -120,13 +120,13 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
           ) 
     | Handle (ideFun) -> (
       (* cerchiamo il nome della handle fun *)
-        if sec_lev != BlockLvl then failwith "Cannot declare a Handle Function outside the Trusted Block"
+        if sec_lev != BlockLvl then failwith "Cannot declare a Handle Function OUTSIDE the Trusted Block"
         else
         let res, resTaint = eval (Den(ideFun)) env taint sec_lev in (* guardiamo se l'ide della handle function è presente nell'env del block*)
           match res with 
-            | Closure(_) -> if resTaint = true then failwith "tainted." 
+            | Closure(_) -> if resTaint = true then failwith "Tainted. Do not proceed." 
                  else (ClosureTrustedBlock(env), resTaint)
-            | _ -> failwith "no handle fun name..."
+            | _ -> failwith "Function in Trusted Block: no such identifier found."
       ) 
     | EndTrustedBlock(i) -> (
        (* estraiamo il trusted block... *)
@@ -141,61 +141,55 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
                   | _ -> extractHandle tail )
             ) in 
               let hName = extractHandle envBlock in 
-                 if hName = "None" then failwith "No Handle in TrustedBlock. Error." 
+                 if hName = "None" then failwith "Trusted Block Handle: no such identifier found." 
                     else
                       let newEnv = (hName, HandleFlag(i), resT)::env in 
                         (Env(newEnv), resT)
-         )
+          )
          | _ -> failwith "No ClosureTrustedBlock. Error."
     )
-    | Include(trst, id, pluginCode, incBody) -> (Int 0, true)
-        (* match sec_lev with 
-          | BlockLvl -> failwith "can't include a plugin inside of a trusted block"
-          | _ -> let pluginResult, t1 = eval pluginCode env taint sec_lev in
-                let env' =
-                  match id with
-                    | "" -> env
-                    | _ -> (id, pluginResult, t1) :: env
-                in eval incBody env' t1 sec_lev *)
-    | Exec(exName, exBody) -> (Int 0, true)
-    | _ -> failwith "fail: error include"
+    | Include(pluginTrust, id, pluginCode) -> (
+        match sec_lev with 
+          | BlockLvl -> failwith "Error: cannot include a Plug-In INSIDE of a Trusted Block"
+          | _ -> ( let updatedEnv = (id, ClosureInclude(pluginTrust, pluginCode), taint)::env in 
+              if String.length id = 0 && pluginCode = Empty then 
+                failwith "Empty Include."
+              else 
+                (Env(updatedEnv), taint) 
+          )
+      )
+    | EndInclude -> (ExecuteCheck env, taint)
+    | Execute(exName, exBody) -> (
+        let exEVT, exTaint = eval (Den(exName)) env taint sec_lev in 
+        if exTaint = true then failwith "Tainted." else
+          match exEVT with 
+            | ClosureInclude(incTrust, incBody) -> (
+                match incTrust with 
+                  | Trusted -> (
+                      let pluginVal, pluginTaint = eval incBody env exTaint Trusted in
+                        if pluginTaint = true then failwith "Tainted." else
+                          match pluginVal with 
+                            | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint Trusted)
+                            | _ -> failwith "Error."
+                    )
+                  | Untrusted -> (
+                    let pluginVal, pluginTaint = eval incBody env exTaint Untrusted in
+                      if pluginTaint = true then failwith "Tainted." else
+                        match pluginVal with 
+                          | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint Trusted)
+                          | _ -> failwith "Error."
+                    )
+                  | BlockLvl -> failwith "EXECUTE PLUGIN: Cannot execute a plugin inside the Trusted Block."
+                )
+            | _ -> failwith "EXECUTE INCLUDE: Plugin identifier was not found in the current environment."
+        )
+    | Empty -> failwith "Nothing to evaluate."
+    | _ -> failwith "Generic Error."
 
 (* 
   la nostra handle e' implicitamente definita quadno chiamiamo il trustedBlock. In questo modo abbiamo risolto
   il bisogno di definire la keyword "Handle"
 *)
-
-(* let newBlockEnv = [] in
-              
-                (*funzione ausiliaria per valutare il contenuto del trust block*)
-  
-                let rec evalBody bodyContent accBlockEnv =
-
-                  match bodyContent with
-                    | [] -> accBlockEnv (*Quando ri esauriscono i contenuti, ritorna l'mbiente accumulato*)
-                    | exp1 :: tail -> (
-
-                        let ret, t1 = eval exp1 accBlockEnv t sec_lev in
-                        match  ret, t1 with
-
-                          | _ , false  -> evalBody tail accBlockEnv 
-                          | _ -> failwith "TRUSTED BLOCK HAS BEEN  DECLARED WRONG"
-                        
-                         ) in 
-
-                    let handleEnv = evalBody body  newBlockEnv in
-
-                    let handleClosure =
-                      let result = lookup handleEnv handle_name in
-                        match result with 
-                          | Closure( _ , handleExp, handleEnv ) -> (handleExp, handleEnv)
-
-                          | _ -> failwith "not found"
-
-                        in
-                        
-                        let handleRes, t_res = eval (fst handleClosure) (snd handleClosure) t sec_lev in
-                          (handleRes, t_res) *)
 
 (* TrustedBlock (ide * expr * expr) -> Fun(...) -> Closure(ide, ...) -> ... -> Handle(ideFun) -> (..)::envPriv
                                                                       (ideHandle, FlagHandle(ideRefEnv), taint)::(ideTrustB, ClosureEnvPriv(envPriv), taint)::env
@@ -214,16 +208,6 @@ body(:exp) =
                     (nomeHandle * evT: Handle * taint)
 
     ENV 
-*)
-
-(*
-   
+    
 Enclave ide * exp(tutto)* exp(include)
-
-
-
-
-
-
-
 *)
