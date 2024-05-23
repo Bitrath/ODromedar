@@ -1,8 +1,7 @@
 open HW1.Ast
-open HW1.Environment
 open HW1.Interpreter
 
-let () = print_endline "Hello, World!";;
+(*let () = print_endline "Hello, World!";;*)
 
 (* let x = 1 in 
     let sum (y: int) = x + y in
@@ -31,5 +30,6 @@ let testTrustBlock = (
       )
     )
   )
-);;
-(* let resTest = eval testTrustBlock [] false Trusted *)
+) 
+
+let _ = eval testTrustBlock [] false Trusted;;

@@ -120,13 +120,13 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
           ) 
     | Handle (ideFun) -> (
       (* cerchiamo il nome della handle fun *)
-        if sec_lev != BlockLvl then failwith "Cannot declare a Handle Function OUTSIDE the Trusted Block"
+        if sec_lev != BlockLvl then failwith "HANDLE Error: Cannot declare a Handle Function OUTSIDE the Trusted Block"
         else
         let res, resTaint = eval (Den(ideFun)) env taint sec_lev in (* guardiamo se l'ide della handle function è presente nell'env del block*)
           match res with 
-            | Closure(_) -> if resTaint = true then failwith "Tainted. Do not proceed." 
+            | Closure(_) -> if resTaint = true then failwith "Handle Error: Tainted. Do not proceed." 
                  else (ClosureTrustedBlock(env), resTaint)
-            | _ -> failwith "Function in Trusted Block: no such identifier found."
+            | _ -> failwith "HANDLE Error: no such identifier found in the Block environment."
       ) 
     | EndTrustedBlock(i) -> (
        (* estraiamo il trusted block... *)
@@ -150,10 +150,10 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
     )
     | Include(pluginTrust, id, pluginCode) -> (
         match sec_lev with 
-          | BlockLvl -> failwith "Error: cannot include a Plug-In INSIDE of a Trusted Block"
+          | BlockLvl -> failwith "INCLUDE Error: cannot include a Plug-In INSIDE of a Trusted Block"
           | _ -> ( let updatedEnv = (id, ClosureInclude(pluginTrust, pluginCode), taint)::env in 
               if String.length id = 0 && pluginCode = Empty then 
-                failwith "Empty Include."
+                failwith "INCLUDE Error: Empty Include."
               else 
                 (Env(updatedEnv), taint) 
           )
@@ -184,11 +184,11 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
             | _ -> failwith "EXECUTE INCLUDE: Plugin identifier was not found in the current environment."
         )
     | Empty -> failwith "Nothing to evaluate."
-    | _ -> failwith "Generic Error."
+    (*| _ -> failwith "Generic Error."*)
 
 (* 
   la nostra handle e' implicitamente definita quadno chiamiamo il trustedBlock. In questo modo abbiamo risolto
-  il bisogno di definire la keyword "Handle"
+    il bisogno di definire la keyword "Handle";
 *)
 
 (* TrustedBlock (ide * expr * expr) -> Fun(...) -> Closure(ide, ...) -> ... -> Handle(ideFun) -> (..)::envPriv
