@@ -1,4 +1,4 @@
 (executable
  (public_name HW1)
  (name main)
- (libraries HW1))
+ (libraries ounit2 HW1))

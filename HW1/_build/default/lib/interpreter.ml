@@ -100,7 +100,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
                   | ClosureTrustedBlock(_) -> ( if evalTaint = true then failwith "tainted." 
                       else 
                         let extEnv = (id, bodyRes, evalTaint)::env in 
-                          eval (EndTrustedBlock(id)) extEnv evalTaint BlockLvl
+                          eval (EndTrustedBlock(id)) extEnv evalTaint sec_lev
                     )
                   | _ -> failwith "TRUSTED BLOCK Error: The Block ended with an expression different than an Handle. Error."
           ) 
