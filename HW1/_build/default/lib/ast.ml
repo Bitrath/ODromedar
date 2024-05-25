@@ -41,7 +41,7 @@ type exp = CstInt of int
     | Include of trust * ide * exp 
     | EndInclude
     | Execute of ide * exp
-    | HandleCall of exp * exp
+    | HandleCall of ide * exp
     | Empty
        (*  
         (* Int Exps *)

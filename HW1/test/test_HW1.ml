@@ -42,19 +42,22 @@ let testTrustedBlock = (
     )
   )
 )
-
-let envHandle_1 = [("sum", Closure ("y", Prim ("+", Den "x", Den "y"), [("x", Int 1, false)]), false)]
 let expInclude_1 = Include(Untrusted, "plugin", (Let("xIn", Public, (CstInt 1), (Let ("yIn", Public, (CstInt 3), (Prim("+", Den "xIn", Den "yIn")))))))
 let expExec_mul = Execute("pluginMul", (Let("n1", Public, (CstInt 3), (Call(Den("mul"), Den("n1"))))))
+let expHandleCall_Den = (Let("n", Private, (CstInt 10), (HandleCall("sum", Den("n")))))
+let expHandleCall_CstInt = (HandleCall("sum", (CstInt 7)))
 
 (* --- Test Environments --- *)
-let envTrustedBlock_1 = [("sum", HandleFlag "trustB1", false); 
+let envTrustedBlock1 = [("sum", HandleFlag "trustB1", false); 
   ("trustB1", ClosureTrustedBlock [("sum", Closure ("y", Prim ("+", Den "x", Den "y"), [("x", Int 1, false)]), false);
   ("x", Int 1, false)], false)]
+
+let envHandle_1 = [("sum", Closure ("y", Prim ("+", Den "x", Den "y"), [("x", Int 1, false)]), false)]
 
 let envInclude_1 = [("plugin", ClosureInclude(Untrusted, (Let("xIn", Public, (CstInt 1), (Let ("yIn", Public, (CstInt 3), (Prim("+", Den "xIn", Den "yIn"))))))), false)]
 
 let envInclude_2 = [("pluginMul", ClosureInclude(Untrusted, (Let("mul", Public, (Fun("n1", Prim("*", Den("n1"), CstInt 2))), (EndInclude)))), false)]
+
 
 (* --- Test Functions --- *)
 let lookup_test name expected_output (env_i: evT env) (ide_i: ide) = 
@@ -68,10 +71,12 @@ let tests = "Test Suite for Interpreter" >::: [
   lookup_test "lookup_env" (Int 1) [("x", Int 1, false)] ("x": ide);
   eval_test "eval_Int" (Int 1, false) (CstInt 1) [] false Trusted;
   eval_test "eval_Prim" (Int 3, false) (Prim("+", Den "x", Den "y")) [("x", Int 1, false); ("y", Int 2, false)] false Trusted;
-  eval_test "eval_TrustedBlock_1" (Env envTrustedBlock_1, false) testTrustedBlock [] false Trusted;
+  eval_test "eval_TrustedBlock1" (Env envTrustedBlock1, false) testTrustedBlock [] false Trusted;
   eval_test "eval_Handle" (ClosureTrustedBlock envHandle_1, false) (Handle "sum") envHandle_1 false BlockLvl;
   eval_test "eval_Include_1" (Env envInclude_1, false) expInclude_1 [] false Trusted;
   eval_test "eval_Exec_mul" (Int 6, false) expExec_mul envInclude_2 false Untrusted;
+  eval_test "eval_HandleCall_TB1_Den" (Int 11, false) expHandleCall_Den envTrustedBlock1 false Trusted;
+  eval_test "eval_HandleCall_TB1_CstInt" (Int 8, false) expHandleCall_CstInt envTrustedBlock1 false Trusted;
 ]
 
 let _ = run_test_tt_main tests 

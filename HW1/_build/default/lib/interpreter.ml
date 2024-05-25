@@ -169,7 +169,47 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
                 )
             | _ -> failwith "EXECUTE INCLUDE: Plugin identifier was not found in the current environment."
         )
-    | HandleCall(_) -> (Unbound, false)
+    | HandleCall(idHandle, paramHandle) -> (
+        let handleFlag, handleTaint = eval (Den(idHandle)) env taint sec_lev in 
+        if handleTaint = true then failwith "HANDLE CALL Error: (Handle Ide) is Tainted." 
+        else 
+          match handleFlag with
+          | HandleFlag(idTB)  -> (
+              let tbClosure, tbTaint = eval (Den(idTB)) env handleTaint sec_lev in 
+              if tbTaint = true then failwith "HANDLE CALL Error: (TB Closure) is Tainted."
+              else (* TB Env Extraction *)
+                match tbClosure with 
+                  | ClosureTrustedBlock(tbEnv) -> (
+                      match paramHandle with 
+                        | Den(id) -> (
+                            let paramRes, paramTaint = eval (Den(id)) env tbTaint sec_lev in 
+                            if paramTaint = true then failwith "HANDLE CALL Error: Variable is Tainted." 
+                            else
+                              let callRes, callTrust = eval (Call(Den(idHandle), Den(id))) ((id, paramRes, paramTaint)::tbEnv) paramTaint BlockLvl in
+                                (callRes, callTrust)
+                          )
+                        | CstInt(n) -> (
+                              let callRes, callTrust = eval (Call(Den(idHandle), (CstInt n))) tbEnv tbTaint BlockLvl in
+                                (callRes, callTrust) 
+                          )
+                        | CstFlt(n) -> (
+                            let callRes, callTrust = eval (Call(Den(idHandle), (CstFlt n))) tbEnv tbTaint BlockLvl in
+                              (callRes, callTrust) 
+                            )
+                        | CstStr(s) -> (
+                            let callRes, callTrust = eval (Call(Den(idHandle), (CstStr s))) tbEnv tbTaint BlockLvl in
+                              (callRes, callTrust) 
+                          )
+                        | CstBool(b) -> (
+                            let callRes, callTrust = eval (Call(Den(idHandle), (CstBool b))) tbEnv tbTaint BlockLvl in
+                              (callRes, callTrust) 
+                          )
+                        | _ -> failwith "HANDLE CALL Error: (Exp) passed was not accepted."
+                    )
+                  | _ -> failwith "HANDLE CALL Error: (TB Env) is not found."
+            )
+          | _ -> failwith "HANDLE CALL: (Handle Tag) not found."
+        )
     | Empty -> failwith "EMPTY: Nothing to evaluate."
     (*| _ -> failwith "Generic Error."*)
 
@@ -179,7 +219,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
 *)
 
 (* TrustedBlock (ide * expr * expr) -> Fun(...) -> Closure(ide, ...) -> ... -> Handle(ideFun) -> (..)::envPriv
-                                                                      (ideHandle, FlagHandle(ideRefEnv), taint)::(ideTrustB, ClosureEnvPriv(envPriv), taint)::env
+                                                                      (ideHandle, FlagHandle(ideTrustB), taint)::(ideTrustB, ClosureEnvPriv(envPriv), taint)::env
    let trustBlockOne(:ide) = 
       trust {
         body(:exp) 
@@ -231,7 +271,17 @@ Enclave ide * exp(tutto)* exp(include)
 
     #include <plugin>
 
+    struct trustedBlock {
+      int x = 1;
+      int sum(int y){
+        return x + y;
+      }
+      handle sum;
+    }
+
     int execute(){
       plugin.fun()
+      plugin.var = 10;
+      handle.sum(plugin.var)
     }
   *)
