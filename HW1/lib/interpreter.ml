@@ -10,25 +10,11 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
   | CstFlt n -> (Float n, taint)
   | CstBool b -> (Int (if b then 1 else 0), taint)
   | CstStr s -> (String s, taint)
-  | Den id -> (lookup env id, t_lookup env id)
-  (* IL BODY E' UN LISTA DI ESPRESSIONI *)
-(*
-  | LetSec (x, eRhs, letBody) ->(
-      
-      let xVal, t1 = eval eRhs env t in (* xVal: evT * bool != xVal, t1: evT, bool *)
-          match t1 with
-
-                          (* CONTROLLO SE IL VALORE È UNTAINED PRIMA DI AGGIUNGERLO ALL'ENVIRONMENT *)
-            | false -> let letEnv = (x, xVal, t1)::env in
-                      eval letBody letEnv t1
-            | true -> failwith "Cannot add tainted data to TrustedBlock"
-    
-  )
-  *)
+  | Den id -> (lookup env id, taint_lookup env id)
   | Let (x, conf, eRhs, letBody) -> ( 
       match sec_lev, conf with
-        | Untrusted, Private -> failwith "Can't make a private declaration in a unstrusted enviroment"    
-        | Trusted, Public ->failwith "Can't make a public declaration in a trusted enviroment "
+        | Untrusted, Private -> failwith "LET Error: Can't make a private declaration in an Untrusted enviroment"    
+        | Trusted, Public ->failwith "LET Error: Can't make a public declaration in a Trusted enviroment "
         | _ -> let xVal, t1 = eval eRhs env taint sec_lev in
             let letEnv = (x, xVal, t1)::env in
               eval letBody letEnv t1 sec_lev  
@@ -102,11 +88,11 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
     (* If available, exit the Block, it already exists!!! *)
     (* -> Not available: Then insert it into the current env and continue with the evaluation of the body *)
         if (clean_lookup env id) = Int 1 then
-            failwith (id ^ " is already declared as an trustedBlock")
+            failwith ("TRUSTED BLOCK Error: (" ^ id ^ ") is already declared as a Trusted Block")
         else if sec_lev = BlockLvl then
-            failwith ("can't declare a trustedBlock inside another one")
+            failwith ("TRUSTED BLOCK Error: can't declare a Trusted Block inside another one")
         else if sec_lev = Untrusted then
-            failwith ("can't declare a trustedBlock inside of untrusted code")
+            failwith ("TRUSTED BLOCK Error: can't declare a Trusted Block inside of UNTRUSTED code")
         else (
             let newBlockEnv = [] in 
               let bodyRes, evalTaint = eval body newBlockEnv taint BlockLvl in 
@@ -116,7 +102,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
                         let extEnv = (id, bodyRes, evalTaint)::env in 
                           eval (EndTrustedBlock(id)) extEnv evalTaint BlockLvl
                     )
-                  | _ -> failwith "The Block ended with an expression different than an Handle. Error."
+                  | _ -> failwith "TRUSTED BLOCK Error: The Block ended with an expression different than an Handle. Error."
           ) 
     | Handle (ideFun) -> (
       (* cerchiamo il nome della handle fun *)
@@ -124,7 +110,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
         else
         let res, resTaint = eval (Den(ideFun)) env taint sec_lev in (* guardiamo se l'ide della handle function è presente nell'env del block*)
           match res with 
-            | Closure(_) -> if resTaint = true then failwith "Handle Error: Tainted. Do not proceed." 
+            | Closure(_) -> if resTaint = true then failwith "HANDLE Error: Tainted. Do not proceed." 
                  else (ClosureTrustedBlock(env), resTaint)
             | _ -> failwith "HANDLE Error: no such identifier found in the Block environment."
       ) 
@@ -141,12 +127,12 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
                   | _ -> extractHandle tail )
             ) in 
               let hName = extractHandle envBlock in 
-                 if hName = "None" then failwith "Trusted Block Handle: no such identifier found." 
+                 if hName = "None" then failwith "END TRUSTED BLOCK Error: (Trusted Block Handle) no such identifier found." 
                     else
                       let newEnv = (hName, HandleFlag(i), resT)::env in 
                         (Env(newEnv), resT)
           )
-         | _ -> failwith "No ClosureTrustedBlock. Error."
+         | _ -> failwith "END TRUSTED BLOCK Error: No ClosureTrustedBlock() in the environment. Error."
     )
     | Include(pluginTrust, id, pluginCode) -> (
         match sec_lev with 
@@ -156,34 +142,35 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
                 failwith "INCLUDE Error: Empty Include."
               else 
                 (Env(updatedEnv), taint) 
-          )
+            )
       )
     | EndInclude -> (ExecuteCheck env, taint)
     | Execute(exName, exBody) -> (
         let exEVT, exTaint = eval (Den(exName)) env taint sec_lev in 
-        if exTaint = true then failwith "Tainted." else
+        if exTaint = true then failwith "EXECUTE Error: Tainted Include in the Environment." else
           match exEVT with 
             | ClosureInclude(incTrust, incBody) -> (
                 match incTrust with 
                   | Trusted -> (
                       let pluginVal, pluginTaint = eval incBody env exTaint Trusted in
-                        if pluginTaint = true then failwith "Tainted." else
+                        if pluginTaint = true then failwith "EXECUTE Error: The Include code is tainted." else
                           match pluginVal with 
-                            | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint Trusted)
-                            | _ -> failwith "Error."
+                            | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint sec_lev)
+                            | _ -> failwith "EXECUTE Error: PluginCode Error."
                     )
                   | Untrusted -> (
                     let pluginVal, pluginTaint = eval incBody env exTaint Untrusted in
                       if pluginTaint = true then failwith "Tainted." else
                         match pluginVal with 
-                          | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint Trusted)
-                          | _ -> failwith "Error."
+                          | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint sec_lev)
+                          | _ -> failwith "EXECUTE Error: PluginCode Error."
                     )
-                  | BlockLvl -> failwith "EXECUTE PLUGIN: Cannot execute a plugin inside the Trusted Block."
+                  | BlockLvl -> failwith "EXECUTE PLUGIN: Cannot execute a plugin inside a Trusted Block."
                 )
             | _ -> failwith "EXECUTE INCLUDE: Plugin identifier was not found in the current environment."
         )
-    | Empty -> failwith "Nothing to evaluate."
+    | HandleCall(_) -> (Unbound, false)
+    | Empty -> failwith "EMPTY: Nothing to evaluate."
     (*| _ -> failwith "Generic Error."*)
 
 (* 
@@ -211,3 +198,40 @@ body(:exp) =
     
 Enclave ide * exp(tutto)* exp(include)
 *)
+
+(* IL BODY E' UN LISTA DI ESPRESSIONI *)
+(*
+  | LetSec (x, eRhs, letBody) ->(
+      
+      let xVal, t1 = eval eRhs env t in (* xVal: evT * bool != xVal, t1: evT, bool *)
+          match t1 with
+
+                          (* CONTROLLO SE IL VALORE È UNTAINED PRIMA DI AGGIUNGERLO ALL'ENVIRONMENT *)
+            | false -> let letEnv = (x, xVal, t1)::env in
+                      eval letBody letEnv t1
+            | true -> failwith "Cannot add tainted data to TrustedBlock"
+    
+  )
+  *)
+
+  (*
+
+    (..)::(ideHandle, HandleFlag(ideTrustedBlock), taintness)::env
+
+    Include(pluginTrust, pluginID, pluginCode)
+
+    
+    Execute(puginName, code)
+    | -> Calls up ClosureInclude(pluginTrust, pluginCode)
+    | -> Trusted: eval pluginCode Trusted
+    |  | -> eval code Trusted
+    | -> Untrusted: eval pluginCode Untrusted
+    |  | -> eval code Trusted
+  
+
+    #include <plugin>
+
+    int execute(){
+      plugin.fun()
+    }
+  *)

@@ -45,10 +45,10 @@ let rec clean_lookup env x =
     | (y, _, _)::r -> if x = y then Int 1 else clean_lookup r x (*????????*)
 
 (* t_lookup: Restituisce lo status di taint di un identificatore nell'ambiente *)
-let rec t_lookup env x =
+let rec taint_lookup env x =
   match env with
     | [] -> failwith "Not Found"
-    | (y, _, t)::r -> if y = x then t else t_lookup r x
+    | (y, _, t)::r -> if y = x then t else taint_lookup r x
 
 (* bind: Aggiunge un nuovo identificatore con valore nell'ambiente 
    ---> (adds a tuple = (string, element) ) *)

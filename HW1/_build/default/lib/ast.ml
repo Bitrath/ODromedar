@@ -19,7 +19,7 @@ type trust =
 type conf =
     | Public
     | Private
-
+    
 type exp = CstInt of int
     | CstBool of bool
     | CstFlt of float
@@ -41,6 +41,7 @@ type exp = CstInt of int
     | Include of trust * ide * exp 
     | EndInclude
     | Execute of ide * exp
+    | HandleCall of exp * exp
     | Empty
        (*  
         (* Int Exps *)
