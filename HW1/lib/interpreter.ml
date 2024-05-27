@@ -56,7 +56,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
           | Closure (f_param, f_body, fDeclEnv),  false  ->
               let xVal, t1 = eval param env taint sec_lev in
                 let fBodyEnv = (f_param, xVal, t1)::fDeclEnv in
-                  let f_res, t_res = eval f_body fBodyEnv taint sec_lev in 
+                  let f_res, t_res = eval f_body fBodyEnv t1 sec_lev in 
                     (f_res, t_res)
           | _ -> failwith "CALL Error: (Closure) not found."
     )
