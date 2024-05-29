@@ -13,7 +13,7 @@ let emptyEnv (env: evT env): evT = (
   match env with 
     | [] -> Bool true 
     | _ -> Bool false 
-)
+);;
 
 let expTrustedBlockPsw = (
   TrustedBlock(
@@ -45,7 +45,7 @@ let expIncludePsw = Include(Untrusted, "myFilter", (Let("ext", Public, (CstStr "
 let expExec_Psw = Execute("myFilter", (HandleCall("checkPassword", Den("ext"))))
 
 let test = ( (* 1) Trusted Block Exp *)
-  let envOne, taintOne = eval expTrustedBlockPsw [] false Trusted in (*  Env(e) *)
+  let envOne, taintOne = eval expTrustedBlockPsw [] false Trusted in (* - Env(e) - *)
     let envOneR = extractEnv envOne in 
       let envOneB = emptyEnv envOneR in 
         match envOneB with 
@@ -58,7 +58,7 @@ let test = ( (* 1) Trusted Block Exp *)
                       | Bool true -> failwith "Env Two Error"
                       | Bool false -> ( (* 3) Exec Plugin with Handle Call *)
                           let result, taintResult = eval expExec_Psw envTwoR taintTwo Trusted in 
-                            if taintResult = true then failwith "exec Error" 
+                            if taintResult = true then failwith "exec taintness Error" 
                             else (result)
                         )
                       | _ -> failwith "Env Two Error 2"
@@ -66,7 +66,7 @@ let test = ( (* 1) Trusted Block Exp *)
           | _ -> failwith "Env One Error 2"
 );;
 
-let testing = "--- test suite for boh ---" >::: [
+let testing = "--- test suite for main ---" >::: [
   "checkPsw" >:: (fun _ -> assert_equal (Bool true) (test));
 ]
 
