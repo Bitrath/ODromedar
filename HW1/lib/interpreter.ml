@@ -8,14 +8,13 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
   match e with
   | CstInt n -> (Int n, taint)            
   | CstFlt n -> (Float n, taint)
-  (* | CstBool b -> (Int (if b then 1 else 0), taint) *)
   | CstBool b -> (Bool b, taint)
   | CstStr s -> (String s, taint)
   | Den id -> (lookup env id, taint_lookup env id)
   | Let (x, conf, eRhs, letBody) -> ( 
       match sec_lev, conf with
         | Untrusted, Private -> failwith "LET Error: Can't make a private declaration in an Untrusted enviroment"    
-        | Trusted, Public ->failwith "LET Error: Can't make a public declaration in a Trusted enviroment "
+        | Trusted, Private ->failwith "LET Error: Can't make a private declaration in a Trusted enviroment " (* Private only in Trusted Block*)
         | BlockLvl, Public ->failwith "LET Error: Can't make a public declaration in a Trusted Block "
         | _ -> let xVal, t1 = eval eRhs env taint sec_lev in
             let letEnv = (x, xVal, t1)::env in
@@ -42,23 +41,30 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
             | "cmp", String s1, String s2 -> (Bool (if (String.compare s1 s2) = 0 then true else false), t1 || t2)
             | _ -> failwith "PRIM Error: Unknown primitive or wrong type"  
     )
+  | SPrim (ope, e1) -> (
+    let v1, t1 = eval e1 env taint sec_lev in 
+      match (ope, v1) with
+      | "not", Bool i1 -> (Bool (not i1), t1)
+      | "iszero", Int i1 -> (Bool (if i1=0 then true else false), t1)
+      | _,_ -> failwith "SPRIM Error: Unknown primitive or wrong type."
+    ) 
   | If (cond, e2, e3) -> (
       let v1, t1 = eval cond env taint sec_lev in
         match v1 with
           | Bool true -> let v2, t2 = eval e2 env  t1 sec_lev  in (v2, t1 || t2)
           | Bool false -> let v3, t3 = eval e3 env  t1 sec_lev  in (v3, t1 || t3)
-          | _ -> failwith "eval if" 
+          | _ -> failwith "IF ERROR: Unexpected condition." 
     )
   | Fun (f_param, f_body) -> (Closure (f_param, f_body, env), taint)
   | Call (f, param) -> (
       let fClosure, f_t = eval f env taint sec_lev in
         match fClosure, f_t with
-          | Closure (f_param, f_body, fDeclEnv), false ->
+          | Closure (f_param, f_body, fDeclEnv), _ ->
               let xVal, t1 = eval param env taint sec_lev in
                 let fBodyEnv = (f_param, xVal, t1)::fDeclEnv in
                   let f_res, t_res = eval f_body fBodyEnv t1 sec_lev in 
                     (f_res, t_res)
-          | _ -> failwith "CALL Error: (Closure) either not found or tainted."
+          | _ -> failwith "CALL Error: (Closure) not found."
     )
   | GetInput e -> eval e env true sec_lev
   | TrustedBlock(id, body) -> (
@@ -85,8 +91,8 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
         else
         let res, resTaint = eval (Den(ideFun)) env taint sec_lev in
           match res with 
-            | Closure(_) -> if resTaint = true then failwith "HANDLE Error: Tainted. Do not proceed." 
-                 else (ClosureTrustedBlock(env), resTaint)
+            | Closure(_) -> let _ = assert (resTaint = false) in 
+                (ClosureTrustedBlock(env), resTaint)
             | _ -> failwith "HANDLE Error: no such identifier found in the Block environment."
     ) 
     | EndTrustedBlock(i) -> (
@@ -113,7 +119,7 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
           | BlockLvl -> failwith "INCLUDE Error: Cannot include a Plug-In INSIDE of a Trusted Block"
           | _ -> ( if pluginTrust = BlockLvl then failwith "INCLUDE Error: Plugin cannot be a Trusted Block."
               else 
-                let updatedEnv = (id, ClosureInclude(pluginTrust, pluginCode), taint)::env in 
+                let updatedEnv = (id, ClosureInclude(pluginTrust, pluginCode), true)::env in 
                   if String.length id = 0 && pluginCode = Empty then 
                     failwith "INCLUDE Error: Empty Include."
                   else 
@@ -123,66 +129,62 @@ let rec eval (e: exp) (env: evT env) (taint: bool) (sec_lev: trust) : evT * bool
     | EndInclude -> (ExecuteCheck env, taint)
     | Execute(exName, exBody) -> (
         let exEVT, exTaint = eval (Den(exName)) env taint sec_lev in 
-        if exTaint = true then failwith "EXECUTE Error: Tainted Include in the Environment." else
-          match exEVT with 
-            | ClosureInclude(incTrust, incBody) -> (
-                match incTrust with 
-                  | Trusted -> (
-                      let pluginVal, pluginTaint = eval incBody env exTaint Trusted in
-                        if pluginTaint = true then failwith "EXECUTE Error: The Include code is tainted." else
-                          match pluginVal with 
-                            | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint sec_lev)
-                            | _ -> failwith "EXECUTE Error: PluginCode Error."
-                    )
-                  | Untrusted -> (
-                    let pluginVal, pluginTaint = eval incBody env exTaint Untrusted in
-                      if pluginTaint = true then failwith "EXECUTE Error: The Include code is tainted." else
-                        match pluginVal with 
-                          | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint sec_lev)
-                          | _ -> failwith "EXECUTE Error: PluginCode Error."
-                    )
-                  | _ -> failwith "EXECUTE PLUGIN: Plugin Generic Trust Error."
-                )
-            | _ -> failwith "EXECUTE INCLUDE: Plugin identifier was not found in the current environment."
+        (*if exTaint = true then failwith "EXECUTE Error: Tainted Include in the Environment." else*)
+        match exEVT with 
+          | ClosureInclude(incTrust, incBody) -> (
+              match incTrust with 
+                | Trusted -> (
+                    let pluginVal, pluginTaint = eval incBody env false Trusted in (*safe plugin assumption*)
+                      (*if pluginTaint = true then failwith "EXECUTE Error: The Include code is tainted." else*)
+                      match pluginVal with 
+                        | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint sec_lev)
+                        | _ -> failwith "EXECUTE Error: PluginCode Error."
+                  )
+                | Untrusted -> (
+                  let pluginVal, pluginTaint = eval incBody env exTaint Untrusted in (*unsafe plugin assumption*)
+                  (*if pluginTaint = true then failwith "EXECUTE Error: The Include code is tainted." else*)
+                    match pluginVal with 
+                      | ExecuteCheck(pluginEnv) -> (eval exBody pluginEnv pluginTaint sec_lev)
+                      | _ -> failwith "EXECUTE Error: PluginCode Error."
+                  )
+                | _ -> failwith "EXECUTE PLUGIN: Plugin Generic Trust Error."
+              )
+          | _ -> failwith "EXECUTE INCLUDE: Plugin identifier was not found in the current environment."
         )
     | HandleCall(idHandle, paramHandle) -> (
         let handleFlag, handleTaint = eval (Den(idHandle)) env taint sec_lev in 
-        if handleTaint = true then failwith "HANDLE CALL Error: (Handle Ide) is Tainted." 
-        else 
-          match handleFlag with
+        let _ = assert (handleTaint = false) in
+        match handleFlag with
           | HandleFlag(idTB)  -> (
               let tbClosure, tbTaint = eval (Den(idTB)) env handleTaint sec_lev in 
-              if tbTaint = true then failwith "HANDLE CALL Error: (TB Closure) is Tainted."
-              else (* TB Env Extraction *)
-                match tbClosure with 
-                  | ClosureTrustedBlock(tbEnv) -> (
-                      match paramHandle with 
-                        | Den(id) -> (
-                            let paramRes, paramTaint = eval (Den(id)) env tbTaint sec_lev in 
-                            if paramTaint = true then failwith "HANDLE CALL Error: Variable is Tainted." 
-                            else
-                              let callRes, callTaint = eval (Call(Den(idHandle), Den(id))) ((id, paramRes, paramTaint)::tbEnv) paramTaint BlockLvl in
-                                (callRes, callTaint)
+              let _ = assert (tbTaint = false) in (* TB Env Extraction *)
+              match tbClosure with 
+                | ClosureTrustedBlock(tbEnv) -> (
+                    match paramHandle with 
+                      | Den(id) -> (
+                          let paramRes, paramTaint = eval (Den(id)) env tbTaint sec_lev in
+                            let callRes, callTaint = eval (Call(Den(idHandle), Den(id))) ((id, paramRes, paramTaint)::tbEnv) paramTaint BlockLvl in
+                              (*let _ = assert(callTaint = false) in*) (callRes, callTaint)
+                        )
+                      | CstInt(n) -> (
+                          let callRes, callTaint = eval (Call(Den(idHandle), (CstInt n))) tbEnv tbTaint BlockLvl in
+                            (*let _ = assert(callTaint = false) in*) (callRes, callTaint) 
+                        )
+                      | CstFlt(n) -> (
+                          let callRes, callTaint = eval (Call(Den(idHandle), (CstFlt n))) tbEnv tbTaint BlockLvl in
+                            (*let _ = assert(callTaint = false) in*) (callRes, callTaint) 
                           )
-                        | CstInt(n) -> (
-                              let callRes, callTaint = eval (Call(Den(idHandle), (CstInt n))) tbEnv tbTaint BlockLvl in
-                                (callRes, callTaint) 
-                          )
-                        | CstFlt(n) -> (
-                            let callRes, callTaint = eval (Call(Den(idHandle), (CstFlt n))) tbEnv tbTaint BlockLvl in
-                              (callRes, callTaint) 
-                            )
-                        | CstStr(s) -> (
-                            let callRes, callTaint = eval (Call(Den(idHandle), (CstStr s))) tbEnv tbTaint BlockLvl in
-                              (callRes, callTaint) 
-                          )
-                        | CstBool(b) -> (
-                            let callRes, callTaint = eval (Call(Den(idHandle), (CstBool b))) tbEnv tbTaint BlockLvl in
-                              (callRes, callTaint) 
-                          )
-                        | _ -> failwith "HANDLE CALL Error: (Exp) passed was not accepted."
-                    )
-                  | _ -> failwith "HANDLE CALL Error: (TB Env) is not found."
+                      | CstStr(s) -> (
+                          let callRes, callTaint = eval (Call(Den(idHandle), (CstStr s))) tbEnv tbTaint BlockLvl in
+                            (*let _ = assert(callTaint = false) in*) (callRes, callTaint) 
+                        )
+                      | CstBool(b) -> (
+                          let callRes, callTaint = eval (Call(Den(idHandle), (CstBool b))) tbEnv tbTaint BlockLvl in
+                            (*let _ = assert(callTaint = false) in*) (callRes, callTaint) 
+                        )
+                      | _ -> failwith "HANDLE CALL Error: (Exp) passed was not accepted."
+                  )
+                | _ -> failwith "HANDLE CALL Error: (TB Env) is not found."
             )
           | _ -> failwith "HANDLE CALL: (Handle Tag) not found."
         )

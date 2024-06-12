@@ -3,12 +3,12 @@ open HW1.Ast
 open HW1.Environment
 open HW1.Interpreter
 
-(* --- Test (lookup_env) Setup ---------------------- *)
-(* --- Test (eval_Int) Setup ------------------------ *)
-(* --- Test (eval_Prim) Setup ----------------------- *)
 (* --- Test (eval_Let) Setup ------------------------ *)
-let expLet = Let("y", Private, (CstInt 2), (Prim("+", Den("x"), Den("y"))));;
+let expLet = Let("y", Public, (CstInt 2), (Prim("+", Den("x"), Den("y"))));;
 let envLet = [("x", Int 1, false)];;
+
+(* --- Test (eval_GetInput) Setup ------------------- *)
+let expGetInput = GetInput(CstStr "some network input");;
 
 (* --- Test (eval_If) Setup ------------------------- *)
 let expIF = If((Prim("=", Den("x"), Den("y"))), (Prim("-", Den("x"), Den("y"))), (Prim("+", Den("x"), Den("y"))));;
@@ -56,14 +56,16 @@ let envHandle = [("sum", Closure ("y", Prim ("+", Den "x", Den "y"), [("x", Int 
 
 (* --- Test (eval_Include) Setup ------------------ *)
 let expInclude = Include(Untrusted, "plugin", (Let("xIn", Public, (CstInt 1), (Let ("yIn", Public, (CstInt 3), (Prim("+", Den "xIn", Den "yIn")))))));;
-let envInclude = [("plugin", ClosureInclude(Untrusted, (Let("xIn", Public, (CstInt 1), (Let ("yIn", Public, (CstInt 3), (Prim("+", Den "xIn", Den "yIn"))))))), false)];;
+let envInclude = [("plugin", ClosureInclude(Untrusted, (Let("xIn", Public, (CstInt 1), (Let ("yIn", Public, (CstInt 3), (Prim("+", Den "xIn", Den "yIn"))))))), true)];;
 
 (* --- Test (eval_Exec_mul) Setup ------------------- *)
 let expExec_mul = Execute("pluginMul", (Let("n1", Public, (CstInt 3), (Call(Den("mul"), Den("n1"))))));;
-let envInclude_Mul = [("pluginMul", ClosureInclude(Untrusted, (Let("mul", Public, (Fun("n1", Prim("*", Den("n1"), CstInt 2))), (EndInclude)))), false)];;
+let expExec_mul_1 = Execute("pluginMul", (Let("n1", Public, (GetInput(CstInt 3)), (Call(Den("mul"), Den("n1"))))));;
+let envInclude_Mul = [("pluginMul", ClosureInclude(Untrusted, (Let("mul", Public, (Fun("n1", Prim("*", Den("n1"), CstInt 2))), (EndInclude)))), true)];;
+
 
 (* --- Test (eval_HandleCall_TB1_Den) Setup --------- *)
-let expHandleCall_Den = (Let("n", Private, (CstInt 10), (HandleCall("sum", Den("n")))));;
+let expHandleCall_Den = (Let("n", Public, (CstInt 10), (HandleCall("sum", Den("n")))));;
 
 (* --- Test (eval_HandleCall_TB1_CstInt) Setup ------ *)
 let expHandleCall_CstInt = (HandleCall("sum", (CstInt 7)));;
@@ -71,7 +73,7 @@ let expHandleCall_CstInt = (HandleCall("sum", (CstInt 7)));;
 (* --- Test (eval_HandleCall_TB2_Psw) Setup --------- *)
 let expExec_Psw = Execute("myFilter", (HandleCall("checkPassword", Den("ext"))));;
 let envExecCheckPSW = [
-  ("myFilter", ClosureInclude (Untrusted, Let ("ext", Public, CstStr "abcd", EndInclude)), false);
+  ("myFilter", ClosureInclude (Untrusted, Let ("ext", Public, CstStr "abcd", EndInclude)), true);
   ("checkPassword", HandleFlag "trustB2", false);
   ("trustB2", ClosureTrustedBlock[
     ("checkPassword", Closure ("guess", Prim ("cmp", Den "password", Den "guess"), [("password", String "abcd", false)]), false);
@@ -123,6 +125,9 @@ let tests = "Test Suite for Interpreter" >::: [
   eval_test "eval_prim_bool_&" (Bool false, false) (Prim("&", Den "x", Den "y")) [("x", Bool true, false); ("y", Bool false, false)] false Trusted;
   eval_test "eval_prim_bool_|" (Bool true, false) (Prim("|", Den "x", Den "y")) [("x", Bool true, false); ("y", Bool false, false)] false Trusted;
   eval_test "eval_prim_string_cmp" (Bool true, false) (Prim("cmp", Den "x", Den "y")) [("x", String "test", false); ("y", String "test", false)] false Trusted;
+  (* --- Eval (SPrim) Tests -------------- *)
+  eval_test "eval_sprim_bool_not" (Bool true, false) (SPrim("not", Den "x")) [("x", Bool false, false)] false Trusted;
+  eval_test "eval_sprim_int_iszero" (Bool true, false) (SPrim("iszero", Den "x")) [("x", Int 0, false)] false Trusted;
   (* --- Eval (If) Tests ----------------- *)
   eval_test "eval_if_e1" (Int 0, false) expIF envIF_e1 false Trusted;
   eval_test "eval_if_e2" (Int 3, false) expIF envIF_e2 false Trusted;
@@ -130,6 +135,7 @@ let tests = "Test Suite for Interpreter" >::: [
   eval_test "eval_fun" (returnFun, false) expFun [] false Trusted;
   eval_test "eval_fun_call" (Int 4, false) expCall envCall false Untrusted;
   (* --- Eval (GetInput) Tests ----------- *)
+  eval_test "eval_getinput" (String "some network input", true) expGetInput envLet false Trusted;
   (* --- Eval (Trusted Block) Tests ------ *)
   eval_test "eval_trusted_block" (Env envTrustedBlock, false) expTrustedBlock [] false Trusted;
   (* --- Eval (Handle) Tests ------------- *)
@@ -137,11 +143,12 @@ let tests = "Test Suite for Interpreter" >::: [
   (* --- Eval (Include) Tests ------------ *)
   eval_test "eval_include" (Env envInclude, false) expInclude [] false Trusted;
   (* --- Eval (Execute) Tests ------------ *)
-  eval_test "eval_exec_mul" (Int 6, false) expExec_mul envInclude_Mul false Untrusted;
+  eval_test "eval_exec_mul" (Int 6, true) expExec_mul envInclude_Mul false Trusted;
+  eval_test "eval_exec_mul_getinput" (Int 6, true) expExec_mul_1 envInclude_Mul false Trusted;
   (* --- Eval (HandleCall) Tests --------- *)
   eval_test "eval_handleCall_den" (Int 11, false) expHandleCall_Den envTrustedBlock false Trusted;
   eval_test "eval_handleCall_int" (Int 8, false) expHandleCall_CstInt envTrustedBlock false Trusted;
-  eval_test "eval_handleCall_psw" (Bool true, false) expExec_Psw envExecCheckPSW false Trusted;
+  eval_test "eval_handleCall_psw" (Bool true, true) expExec_Psw envExecCheckPSW false Trusted;
 ];;
 
 let _ = run_test_tt_main tests;;

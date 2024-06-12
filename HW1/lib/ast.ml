@@ -17,6 +17,7 @@ type exp = CstInt of int
     | CstFlt of float
     | CstStr of string
     | Prim of ide * exp * exp
+    | SPrim of ide * exp
     | Den of ide
     | If of exp * exp * exp
     | Let of ide * conf * exp * exp 
