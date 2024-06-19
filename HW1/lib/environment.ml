@@ -38,11 +38,7 @@ let rec taint_lookup env x =
     | [] -> failwith ("TAINT-LOOKUP Error: (" ^ x ^ ") not found.")
     | (y, _, t)::r -> if y = x then t else taint_lookup r x
 
-(* bind: Aggiunge un nuovo identificatore con valore nell'ambiente 
-   ---> (adds a tuple = (string, element) ) *)
-let bind env (x: ide) (v: 'a) = (x, v)::env
 
-let pop_first e = 
-  match e with 
-    | [] -> None
-    | first :: _ -> Some first
+
+(* DA TOGLIERE*)
+
