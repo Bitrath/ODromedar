@@ -1,15 +1,17 @@
 # ODromedar 
+_MSc. Cybersecurity (UniPi) Course: Language-Based Technology for Security_
+
 ODromedar is an interpreter for a simple functional language, designed with specialized primitive abstractions to protect program execution from untrusted code. Written primarily in OCaml, this project focuses on implementing robust security mechanisms such as dynamic taint analysis, trusted enclaves, and safe plugin execution.
 
 ## Repository File Structure
 The repository is structured as follows:
 
-* _HW1/_ - The main directory containing the project source code and tests.
-  * _lib/_ - Contains the core implementation files of the interpreter.
+* _**HW1/**_ - The main directory containing the project source code and tests.
+  * _**lib/**_ - Contains the core implementation files of the interpreter.
     * _ast.ml_: Defines the Abstract Syntax Tree (AST), formalizing the language's syntax. It handles security models including trust levels (Trusted, Untrusted, BlockLvl) and confidentiality tags (Public, Private) to handle secret abstractions.
     * _environment.ml_: Defines the evaluation environment type (evT) and hosts utility functions such as lookup, clean_lookup, and taint_lookup to check variables and their taint statuses.
     * _interpreter.ml_: The core of the project, containing the central eval() function that evaluates expressions dynamically while taking the environment, taint value, and trust level into account.
-  * _test/_ - Contains the testing suite to validate the interpreter.
+  * _**test/**_ - Contains the testing suite to validate the interpreter.
     * _test-HW1.ml_: Utilizes the OUnit2 testing framework to run an extensive suite of 39 custom tests, including scenarios for "Tainted Plugin Execution" and a "Password Checking" simulation.
 
 ## Key Features & Security Abstractions
@@ -23,11 +25,9 @@ The repository is structured as follows:
 * **Testing Framework**: OUnit2
 
 ## Authors
-Nicolò Zarulli @[Bitrath](https://github.com/Bitrath)
-Luca Cremonese @[baylonp](https://github.com/baylonp)
-Nicola Cavaletti @[nicolacava01](https://github.com/nicolacava01)
-Davide Di Rocco @[Davide-Di-Rocco-88](https://github.com/Davide-Di-Rocco-88)
+* Nicolò Zarulli @[Bitrath](https://github.com/Bitrath)
+* Luca Cremonese @[baylonp](https://github.com/baylonp)
+* Nicola Cavaletti @[nicolacava01](https://github.com/nicolacava01)
+* Davide Di Rocco @[Davide-Di-Rocco-88](https://github.com/Davide-Di-Rocco-88)
 
-Advisors: Prof. Gian-Luigi Ferrari, Prof.ssa Chiara Bodei
 
-Academic Year: 2023/24
